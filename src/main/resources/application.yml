@@ -14,8 +14,8 @@ spring:
   jpa:
     open-in-view: true
     hibernate:
-      ddl-auth: create
-      user-new-id-generator-mappings: flase
+      ddl-auto: create
+      user-new-id-generator-mappings: false
     properties:
       hibernate:
         show_sql: false
