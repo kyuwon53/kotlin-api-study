@@ -29,5 +29,5 @@ logging:
       hibernate:
         type.descriptor.sql: trace
         SQL: debug
-
+REST_API_KEY: "92978f2b958db6e924bfa4583fa77460"
 
