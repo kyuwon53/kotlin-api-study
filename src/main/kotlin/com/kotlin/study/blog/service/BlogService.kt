@@ -3,7 +3,9 @@ package com.kotlin.study.blog.service
 import com.kotlin.study.blog.dto.BlogDto
 import com.kotlin.study.blog.entity.WordCount
 import com.kotlin.study.blog.repository.WordRepository
+import jakarta.persistence.EntityNotFoundException
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.data.repository.findByIdOrNull
 import org.springframework.http.HttpHeaders.CONTENT_TYPE
 import org.springframework.http.MediaType.APPLICATION_JSON_VALUE
 import org.springframework.stereotype.Service
@@ -39,7 +41,9 @@ class BlogService(
         val result = response.block()
 
         val lowQuery: String = blogDto.query.lowercase()
-        val word: WordCount = wordRepository.findById(lowQuery).orElse(WordCount(lowQuery))
+        val word: WordCount = wordRepository.findByIdOrNull(lowQuery)?.let { wordCount -> WordCount(lowQuery) }
+            ?: throw EntityNotFoundException("Not found Word")
+
         word.cnt++
 
         wordRepository.save(word)
