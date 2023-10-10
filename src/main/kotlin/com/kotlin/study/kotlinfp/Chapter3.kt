@@ -2,10 +2,20 @@ package com.kotlin.study.kotlinfp
 
 class Chapter3
 
-fun main() {
+sealed class List<out A> {
+    companion object {
+        fun <A> empty(): List<A> = Nil
+        fun <A> of(vararg elements: A): List<A> {
+            return if (elements.isEmpty()) {
+                Nil
+            } else {
+                val tail = elements.sliceArray(1 until elements.size)
+                Cons(elements[0], of(*tail))
+            }
+        }
+    }
 }
 
-sealed class List<out A>
 object Nil : List<Nothing>()
 data class Cons<out A>(val head: A, val tail: List<A>) : List<A>()
 
@@ -52,3 +62,36 @@ fun <A> init(list: List<A>): List<A> =
             Cons(list.head, init(list.tail))
         }
     }
+
+// 3.8
+fun <A, B> foldRight(list: List<A>, init: B, f: (A, B) -> B): B =
+    when (list) {
+        is Nil -> init
+        is Cons -> f(list.head, foldRight(list.tail, init, f))
+    }
+
+fun <A> length(list: List<A>): Int =
+    foldRight(list, 0) { _, length -> 1 + length }
+
+// 3.9
+tailrec fun <A, RETURN> foldLeft(list: List<A>, init: RETURN, f: (RETURN, A) -> RETURN): RETURN =
+    when (list) {
+        is Nil -> init
+        is Cons -> foldLeft(list.tail, f(init, list.head), f)
+    }
+
+// 3.10
+
+fun sum(list: List<Int>): Int = foldLeft(list, 0) { x, y -> x + y }
+fun product(list: List<Double>): Double = foldLeft(list, 1.0) { x, y -> x * y }
+fun <A> lengthFoldLeft(list: List<A>): Int = foldLeft(list, 0) { curr, _ -> curr + 1 }
+
+// 3.11
+fun <A> reverse(list: List<A>): List<A> = foldLeft(list, List.empty()) { acc, curr -> Cons(curr, acc) }
+
+// 3.12
+
+fun main() {
+    val list: List<Int> = List.of(1, 2, 3, 4, 5, 6)
+    print(reverse(list))
+}
