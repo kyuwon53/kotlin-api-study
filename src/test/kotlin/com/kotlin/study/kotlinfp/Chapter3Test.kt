@@ -283,3 +283,173 @@ class Chapter3_22 {
     }
 }
 
+// 3.23
+
+class Chapter3_23 {
+    tailrec fun <A> startsWith(target: List<A>, sub: List<A>): Boolean =
+        when (target) {
+            is Nil -> sub == Nil
+            is Cons -> when (sub) {
+                is Nil -> true
+                is Cons -> {
+                    if (target.head == sub.head) {
+                        startsWith(target.tail, sub.tail)
+                    } else {
+                        false
+                    }
+                }
+            }
+        }
+
+    tailrec fun <A> hasSubsequence(target: List<A>, sub: List<A>): Boolean =
+        when (target) {
+            is Nil -> false
+            is Cons -> if (startsWith(target, sub)) {
+                true
+            } else {
+                hasSubsequence(target.tail, sub)
+            }
+        }
+
+    @Test
+    fun test() {
+        val target = List.of(1, 2, 3, 4, 5)
+        assertThat(hasSubsequence(target, List.of(1, 2))).isTrue()
+        assertThat(hasSubsequence(target, List.of(2, 3))).isTrue()
+        assertThat(hasSubsequence(target, List.of(4))).isTrue()
+        assertThat(hasSubsequence(target, List.of(2, 5))).isFalse()
+    }
+}
+
+// 3.24
+sealed class Tree<out A>
+data class Leaf<A>(val value: A) : Tree<A>()
+data class Branch<A>(val left: Tree<A>, val right: Tree<A>) : Tree<A>()
+
+fun <A> size(target: Tree<A>): Int =
+    when (target) {
+        is Leaf -> 1
+        is Branch -> 1 + size(target.left) + size(target.right)
+    }
+
+class Chapter3_24 {
+    @Test
+    fun test() {
+        val tree: Tree<Int> = Branch(Branch(Leaf(1), Leaf(2)), Leaf(3))
+        assertThat(size(tree)).isEqualTo(5)
+    }
+}
+
+//3.25
+fun maximum(target: Tree<Int>): Int =
+    when (target) {
+        is Leaf -> target.value
+        is Branch -> maxOf(maximum(target.left), maximum(target.right))
+    }
+
+class Chapter3_25 {
+    @Test
+    fun test() {
+        val tree: Tree<Int> = Branch(Branch(Leaf(1), Leaf(2)), Leaf(3))
+        assertThat(maximum(tree)).isEqualTo(3)
+    }
+}
+
+// 3.26
+fun <A> depth(target: Tree<A>): Int =
+    when (target) {
+        is Leaf -> 0
+        is Branch -> maxOf(depth(target.left), depth(target.right)) + 1
+    }
+
+class Chapter3_26 {
+    @Test
+    fun test() {
+        val tree: Tree<Int> = Branch(
+            Branch(
+                Leaf(1),
+                Branch(Leaf(2), Leaf(3))
+            ), Leaf(4)
+        )
+        assertThat(depth(tree)).isEqualTo(3)
+    }
+}
+
+// 3.27
+
+fun <A, RETURN> mapTree(target: Tree<A>, transform: (A) -> RETURN): Tree<RETURN> =
+    when (target) {
+        is Leaf -> Leaf(transform(target.value))
+        is Branch -> Branch(
+            mapTree(target.left, transform),
+            mapTree(target.right, transform)
+        )
+    }
+
+class Chapter3_27 {
+    @Test
+    fun test() {
+        val treeInt: Tree<Int> = Branch(Branch(Leaf(1), Leaf(2)), Leaf(3))
+        val treeString: Tree<String> = Branch(Branch(Leaf("1"), Leaf("2")), Leaf("3"))
+
+        val transform: (Int) -> String = { it.toString() }
+        assertThat(mapTree(treeInt, transform)).isEqualTo(treeString)
+    }
+}
+
+// 3.28
+
+fun <A, B> fold(target: Tree<A>, leaf: (A) -> B, branch: (B, B) -> B): B =
+    when (target) {
+        is Leaf -> leaf(target.value)
+        is Branch -> branch(fold(target.left, leaf, branch), fold(target.right, leaf, branch))
+    }
+
+fun <A> sizeF(target: Tree<A>): Int =
+    fold(target, { 1 }, { left, right -> 1 + left + right })
+
+fun maximumF(target: Tree<Int>): Int =
+    fold(target, { target -> target }, { left, right -> maxOf(left, right) })
+
+fun <A> depthF(target: Tree<A>): Int =
+    fold(target, { 0 }, { left, right -> maxOf(left, right) + 1 })
+
+fun <A, B> mapTreeF(target: Tree<A>, transform: (A) -> B): Tree<B> =
+    fold(
+        target,
+        { leaf: A -> Leaf(transform(leaf)) },
+        { left: Tree<B>, right: Tree<B> -> Branch(left, right) })
+
+class Chapter3_28 {
+    @Test
+    fun testSizeF() {
+        val tree: Tree<Int> = Branch(Branch(Leaf(1), Leaf(2)), Leaf(3))
+        assertThat(sizeF(tree)).isEqualTo(5)
+    }
+
+    @Test
+    fun testMaximumF() {
+        val tree: Tree<Int> = Branch(Branch(Leaf(1), Leaf(2)), Leaf(3))
+        assertThat(maximumF(tree)).isEqualTo(3)
+    }
+
+    @Test
+    fun testDepthF() {
+        val tree: Tree<Int> = Branch(
+            Branch(
+                Leaf(1),
+                Branch(Leaf(2), Leaf(3))
+            ), Leaf(4)
+        )
+        assertThat(depthF(tree)).isEqualTo(3)
+    }
+
+    @Test
+    fun testMapTreeF() {
+        val treeInt: Tree<Int> = Branch(Branch(Leaf(1), Leaf(2)), Leaf(3))
+        val treeString: Tree<String> = Branch(Branch(Leaf("1"), Leaf("2")), Leaf("3"))
+
+        val transform: (Int) -> String = { it.toString() }
+        assertThat(mapTreeF(treeInt, transform)).isEqualTo(treeString)
+    }
+}
