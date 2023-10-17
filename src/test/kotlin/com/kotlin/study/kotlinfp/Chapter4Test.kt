@@ -1,5 +1,7 @@
 package com.kotlin.study.kotlinfp
 
+import com.kotlin.study.kotlinfp.Either.Left
+import com.kotlin.study.kotlinfp.Either.Right
 import com.kotlin.study.kotlinfp.FList.Cons
 import com.kotlin.study.kotlinfp.FList.Nil
 import com.kotlin.study.kotlinfp.Option.None
@@ -149,3 +151,83 @@ class sequenceTest {
 }
 
 // 4.5
+fun <ITEM : Any, RETURN : Any> FList<ITEM>.traverse(block: (ITEM) -> Option<RETURN>): Option<FList<RETURN>> =
+    foldRight(Option(FList())) { curr, acc ->
+        block(curr).combine(acc) { head, tail -> Cons(head, tail) }
+    }
+
+fun <ITEM : Any> FList<Option<ITEM>>.sequence2(): Option<FList<ITEM>> =
+    traverse { it }
+
+class traverseTest {
+    @Test
+    fun test() {
+        val target = FList(1, 2, 3)
+        val empty = FList<Int>()
+
+        assertThat(target.traverse { Some(it) }).isEqualTo(Option(FList(1, 2, 3)))
+        assertThat(empty.traverse { Some(it) }).isEqualTo(Option(FList<Int>()))
+    }
+
+    @Test
+    fun sequence2Test() {
+        val target = FList(Option(1), Option(2), Option(3))
+        val target2 = FList(Option(1), Option(), Option(3))
+        val empty = FList(Option<Int>())
+
+
+        assertThat(target.sequence2()).isEqualTo(Option(FList(1, 2, 3)))
+        assertThat(target2.sequence2()).isEqualTo(None)
+        assertThat(empty.sequence2()).isEqualTo(None)
+    }
+}
+
+// 4.6
+
+sealed class Either<out LEFT : Any, out RIGHT : Any> {
+    data class Left<out VALUE : Any> @PublishedApi internal constructor(@PublishedApi internal val value: VALUE) :
+        Either<VALUE, Nothing>()
+
+    data class Right<out VALUE : Any> @PublishedApi internal constructor(@PublishedApi internal val value: VALUE) :
+        Either<Nothing, VALUE>()
+
+    companion object {
+        inline fun <VALUE : Any> right(value: VALUE) = Right(value)
+        inline fun <VALUE : Any> left(value: VALUE) = Left(value)
+    }
+}
+
+fun <LEFT : Any, RIGHT : Any, RETURN : Any> Either<LEFT, RIGHT>.map(block: (RIGHT) -> RETURN): Either<LEFT, RETURN> =
+    when (this) {
+        is Right -> Either.right(block(value))
+        is Left -> Either.left(value)
+    }
+
+fun <LEFT : Any, RIGHT : Any, RETURN : Any> Either<LEFT, RIGHT>.flatMap(block: (RIGHT) -> Either<LEFT, RETURN>): Either<LEFT, RETURN> =
+    when (this) {
+        is Right -> block(value)
+        is Left -> Either.left(value)
+    }
+
+fun <LEFT : Any, RIGHT : Any> Either<LEFT, RIGHT>.orElse(block: () -> Either<LEFT, RIGHT>): Either<LEFT, RIGHT> =
+    when (this) {
+        is Right -> this
+        is Left -> block()
+    }
+
+fun <LEFT : Any, RIGHT : Any, OTHER : Any, RETURN : Any> Either<LEFT, RIGHT>.combine(
+    other: Either<LEFT, OTHER>,
+    block: (RIGHT, OTHER) -> RETURN
+): Either<LEFT, RETURN> =
+    flatMap { right -> other.map { block(right, it) } }
+
+// 4.7
+fun <ITEM : Any, LEFT : Any, RIGHT : Any> FList<ITEM>.traverseEither(block: (ITEM) -> Either<LEFT, RIGHT>): Either<LEFT, FList<RIGHT>> =
+    foldRight(Either.right(FList())) { curr, acc ->
+        block(curr).combine(acc) { head, tail -> Cons(head, tail) }
+    }
+
+fun <ITEM : Any, LEFT : Any, RIGHT : Any> FList<Either<LEFT, ITEM>>.sequenceEither(): Either<LEFT, FList<ITEM>> =
+    traverseEither { it }
+
+// 4.8
