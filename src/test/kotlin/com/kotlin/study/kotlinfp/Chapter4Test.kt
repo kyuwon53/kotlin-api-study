@@ -108,3 +108,44 @@ class varianceTest {
         assertThat(variance(empty)).isEqualTo(None)
     }
 }
+
+// 4.3
+
+fun <VALUE : Any, OTHER : Any, RETURN : Any> Option<VALUE>.combine(
+    other: Option<OTHER>,
+    block: (VALUE, OTHER) -> RETURN
+): Option<RETURN> =
+    flatMap { value -> other.map { block(value, it) } }
+
+class combineTest {
+    @Test
+    fun test() {
+        val doubleData = Option(1.8)
+        val intData = Option(10)
+        val result: Option<String> = doubleData.combine(intData) { x, y -> "${x * y}" }
+
+        assertThat(result.getOrElse { "error" }).isEqualTo("18.0");
+    }
+}
+
+// 4.4
+fun <ITEM : Any> FList<Option<ITEM>>.sequence(): Option<FList<ITEM>> =
+    foldRight(Option(FList())) { curr, acc ->
+        curr.combine(acc) { head, tail -> Cons(head, tail) }
+    }
+
+class sequenceTest {
+    @Test
+    fun test() {
+        val target = FList(Option(1), Option(2), Option(3))
+        val target2 = FList(Option(1), Option(), Option(3))
+        val empty = FList(Option<Int>())
+
+
+        assertThat(target.sequence()).isEqualTo(Option(FList(1, 2, 3)))
+        assertThat(target2.sequence()).isEqualTo(None)
+        assertThat(empty.sequence()).isEqualTo(None)
+    }
+}
+
+// 4.5
